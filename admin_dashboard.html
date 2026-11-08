@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FINAL BOUNDARY - 管理者用ライブ集計</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background-color: #0a0f16;
+    color: #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+  }
+  h1 {
+    color: #00e5ff;
+    text-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
+    margin-bottom: 30px;
+  }
+  .chart-container {
+    width: 80%;
+    max-width: 600px;
+    background: rgba(16, 28, 48, 0.85);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+  }
+  .loading {
+    margin-bottom: 15px;
+    color: #feca57;
+  }
+</style>
+</head>
+<body>
+
+  <h1>会場ライブ集計：職員の抱え込みタイプ</h1>
+  <div id="loading" class="loading">データを取得中...（5秒ごとに更新）</div>
+  
+  <div class="chart-container">
+    <canvas id="resultChart"></canvas>
+  </div>
+
+<script>
+  // ----------------------------------------------------
+  // ▼ ここにStep 1で取得したGASのウェブアプリURLを貼り付けてください ▼
+  // ----------------------------------------------------
+  const GAS_WEB_APP_URL = "YOUR_GAS_WEBAPP_URL_HERE"; 
+  
+  let myPieChart = null;
+
+  function fetchDataAndUpdateChart() {
+    if(GAS_WEB_APP_URL === "YOUR_GAS_WEBAPP_URL_HERE") {
+      document.getElementById('loading').innerText = "エラー：GASのURLが設定されていません。コードを編集してください。";
+      return;
+    }
+
+    fetch(GAS_WEB_APP_URL)
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('loading').innerText = `最新データ取得完了：${new Date().toLocaleTimeString()}`;
+        
+        // データ配列に変換
+        const chartData = [
+          data.A || 0, // 勇者
+          data.B || 0, // 修行僧
+          data.C || 0, // 城壁
+          data.D || 0  // 指揮者
+        ];
+
+        updateChart(chartData);
+      })
+      .catch(error => {
+        console.error('Error fetching data:', error);
+        document.getElementById('loading').innerText = "データの取得に失敗しました。";
+      });
+  }
+
+  function updateChart(data) {
+    const ctx = document.getElementById('resultChart').getContext('2d');
+    
+    if (myPieChart) {
+      myPieChart.data.datasets[0].data = data;
+      myPieChart.update();
+    } else {
+      myPieChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: ['勇者 (自責・抱え込み)', '修行僧 (自己完結)', '城壁 (回避・シャットアウト)', '指揮者 (境界線・チーム連携)'],
+          datasets: [{
+            data: data,
+            backgroundColor: [
+              '#ff4757', // 赤
+              '#2ed573', // 緑
+              '#feca57', // 黄
+              '#00e5ff'  // 青
+            ],
+            borderColor: '#0a0f16',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#e2e8f0', font: { size: 14 } }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  // 初回実行
+  fetchDataAndUpdateChart();
+  // 5秒ごとに自動更新
+  setInterval(fetchDataAndUpdateChart, 5000);
+
+</script>
+</body>
+</html>
